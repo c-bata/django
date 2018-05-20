@@ -36,11 +36,13 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '--merge', action='store_true',
-            help="Enable fixing of migration conflicts by merging.",
+            help="Fixes migration conflicts by generating a single new migration file"
+                 " while retaining the original conflicting files.",
         )
         parser.add_argument(
             '--rebase', action='store_true', dest='rebase',
-            help="Enable fixing of migration conflicts by rebasing.",
+            help="Fixes migration conflicts by deleting a conflicting migration "
+                 "and reapplying it to a new migration.",
         )
         parser.add_argument(
             '--empty', action='store_true',
