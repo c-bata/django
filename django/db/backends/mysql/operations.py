@@ -195,20 +195,50 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def sql_flush(self, style, tables, sequences, allow_cascade=False):
         # NB: The generated SQL below is specific to MySQL
-        # 'TRUNCATE x;', 'TRUNCATE y;', 'TRUNCATE z;'... style SQL statements
-        # to clear all tables of all data
+        # 'TRUNCATE x;', 'TRUNCATE y;', 'DELETE FROM z;'... style SQL
+        # statements to clear all tables of all data.
+        # 'DELETE FROM' is used for small tables, 'TRUNCATE' is used for
+        # large tables.
         if tables:
+            with self.connection.cursor() as cursor:
+                cursor.execute("""
+                SELECT table_name, table_rows
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE() AND table_name IN %s;
+                """, (tables,))
+                rows = cursor.fetchall()
+
             sql = ['SET FOREIGN_KEY_CHECKS = 0;']
-            for table in tables:
-                sql.append('%s %s;' % (
-                    style.SQL_KEYWORD('TRUNCATE'),
-                    style.SQL_FIELD(self.quote_name(table)),
-                ))
+            for table_name, table_rows in rows:
+                if table_rows <= 1000:
+                    # 1000 is a heuristic threshold to determine
+                    # whether using "DELETE FROM" or "TRUNCATE".
+                    sql.append('%s %s %s;' % (
+                        style.SQL_KEYWORD('DELETE'),
+                        style.SQL_KEYWORD('FROM'),
+                        style.SQL_FIELD(self.quote_name(table_name)),
+                    ))
+                else:
+                    sql.append('%s %s;' % (
+                        style.SQL_KEYWORD('TRUNCATE'),
+                        style.SQL_FIELD(self.quote_name(table_name)),
+                    ))
+
             sql.append('SET FOREIGN_KEY_CHECKS = 1;')
             sql.extend(self.sequence_reset_by_name_sql(style, sequences))
             return sql
         else:
             return []
+
+    def sequence_reset_by_name_sql(self, style, sequences):
+        return [
+            '%s %s %s %s = 1;' % (
+                style.SQL_KEYWORD('ALTER'),
+                style.SQL_KEYWORD('TABLE'),
+                style.SQL_FIELD(self.quote_name(sequence_info['table'])),
+                style.SQL_FIELD('AUTO_INCREMENT'),
+            ) for sequence_info in sequences
+        ]
 
     def validate_autopk_value(self, value):
         # MySQLism: zero in AUTO_INCREMENT field does not work. Refs #17653.

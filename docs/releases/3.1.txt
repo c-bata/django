@@ -346,6 +346,13 @@ Models
 
 * :meth:`.QuerySet.bulk_create` now sets the primary key on objects when using
   MariaDB 10.5+.
+* The ``sql_flush`` method in MySQL DatabaseOperations is faster now.
+
+* The command:`sql_flush` command now generates more efficient SQL for table containing
+  a few rows on MySQL by using ``DELETE`` statements instead of ``TRUNCATE``.
+* The ``DatabaseOperations.sql_flush()`` method now generates more efficient
+  SQL for table containing a few rows on MySQL by using
+  ``DELETE`` statements instead of ``TRUNCATE``.
 
 Pagination
 ~~~~~~~~~~
@@ -414,6 +421,12 @@ Tests
 
 * :class:`~django.test.runner.DiscoverRunner` now skips running the system
   checks on databases not :ref:`referenced by tests<testing-multi-db>`.
+
+* :class:`django.test.TransactionTestCase` teardown is now faster on MySQL
+  due to :djadmin:`flush` command improvements on this backend. As a side
+  effect the latter doesn't automatically reset sequences on teardown anymore.
+  Enable :attr:`django.test.TransactionTestCase.reset_sequences` if your tests
+  require such feature.
 
 URLs
 ~~~~
