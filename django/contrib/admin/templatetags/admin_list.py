@@ -260,7 +260,7 @@ def items_for_result(cl, result, form):
                 bf = form[field_name]
                 result_repr = mark_safe(str(bf.errors) + str(bf))
             yield format_html('<td{}>{}</td>', row_class, result_repr)
-    if form and not form[cl.model._meta.pk.name].is_hidden:
+    if form and form[cl.model._meta.pk.name].is_hidden:
         yield format_html('<td>{}</td>', form[cl.model._meta.pk.name])
 
 
